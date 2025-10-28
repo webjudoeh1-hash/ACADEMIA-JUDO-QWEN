@@ -23,6 +23,7 @@ export default function AdminPanel({ user }) {
 
     if (error) {
       console.error('Error al obtener archivos:', error);
+      setMessage(error.message);
     } else {
       setFiles(data);
     }
@@ -89,9 +90,33 @@ export default function AdminPanel({ user }) {
     }
   };
 
+  const downloadFile = async (filePath) => {
+    const { data, error } = await supabase.storage
+      .from('private-content')
+      .download(filePath);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    const url = URL.createObjectURL(data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filePath.split('/').pop();
+    a.click();
+  };
+
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-6">Panel de Administrador</h2>
+
+      {/* Mensaje de feedback */}
+      {message && (
+        <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">
+          {message}
+        </div>
+      )}
 
       {/* Subir nuevo contenido */}
       <div className="mb-8 p-4 bg-white rounded-lg shadow">
@@ -121,7 +146,6 @@ export default function AdminPanel({ user }) {
         >
           Subir Archivo
         </button>
-        {message && <p className="mt-2 text-green-600">{message}</p>}
       </div>
 
       {/* Lista de archivos */}
@@ -130,21 +154,26 @@ export default function AdminPanel({ user }) {
         {files.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {files.map((file) => (
-              <div key={file.id} className="bg-white p-4 rounded-lg shadow flex justify-between items-center">
-                <div>
-                  <h4 className="font-semibold">{file.title}</h4>
-                  <p className="text-sm text-gray-600">{file.description}</p>
+              <div key={file.id} className="bg-white p-4 rounded-lg shadow flex flex-col">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold truncate">{file.title}</h4>
+                    <p className="text-sm text-gray-600 truncate">{file.description}</p>
+                  </div>
+                  <div className="ml-2 flex-shrink-0">
+                    <span className={`inline-block w-3 h-3 rounded-full ${file.file_type === 'image' ? 'bg-green-500' : 'bg-blue-500'}`} title={file.file_type}></span>
+                  </div>
                 </div>
-                <div className="flex space-x-2">
+                <div className="mt-auto flex space-x-2">
                   <button
-                    onClick={() => window.open(`https://mttbktnkhjdmlqzmzpp1.supabase.co/storage/v1/object/public/private-content/${file.file_path}`, '_blank')}
-                    className="bg-blue-600 text-white py-1 px-3 rounded hover:bg-blue-700"
+                    onClick={() => downloadFile(file.file_path)}
+                    className="bg-blue-600 text-white py-1 px-3 rounded hover:bg-blue-700 text-sm"
                   >
-                    Ver
+                    Descargar
                   </button>
                   <button
                     onClick={() => deleteFile(file.id, file.file_path)}
-                    className="bg-red-600 text-white py-1 px-3 rounded hover:bg-red-700"
+                    className="bg-red-600 text-white py-1 px-3 rounded hover:bg-red-700 text-sm"
                   >
                     Eliminar
                   </button>
