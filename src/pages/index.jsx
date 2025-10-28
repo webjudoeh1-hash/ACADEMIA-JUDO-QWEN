@@ -1,3 +1,4 @@
+// src/pages/index.jsx
 import Head from 'next/head';
 
 export default function Home() {
