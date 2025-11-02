@@ -21,20 +21,42 @@ export default function GroupManager() {
 
   const fetchGroups = async () => {
     const { data, error } = await supabase.from('groups').select('*').order('name');
-    if (error) console.error('Error al cargar grupos:', error);
-    else setGroups(data);
+    if (error) {
+      console.error('Error al cargar grupos:', error);
+      setMessage(error.message);
+    } else {
+      setGroups(data);
+    }
   };
 
   const fetchUsers = async () => {
-    const { data, error } = await supabase.from('profiles').select('id, username, email').order('username');
-    if (error) console.error('Error al cargar usuarios:', error);
-    else setUsers(data);
+    const {  user } } = await supabase.auth.getUser();
+    if (!user) {
+      setMessage('No estás autenticado');
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username, email')
+      .order('username');
+
+    if (error) {
+      console.error('Error al cargar usuarios:', error);
+      setMessage(error.message);
+    } else {
+      setUsers(data);
+    }
   };
 
   const fetchDocuments = async () => {
     const { data, error } = await supabase.from('private_content').select('id, title').order('title');
-    if (error) console.error('Error al cargar documentos:', error);
-    else setDocuments(data);
+    if (error) {
+      console.error('Error al cargar documentos:', error);
+      setMessage(error.message);
+    } else {
+      setDocuments(data);
+    }
   };
 
   const createGroup = async () => {
@@ -44,8 +66,9 @@ export default function GroupManager() {
     }
 
     const { error } = await supabase.from('groups').insert(newGroup);
-    if (error) setMessage(error.message);
-    else {
+    if (error) {
+      setMessage(error.message);
+    } else {
       setMessage('Grupo creado exitosamente');
       setNewGroup({ name: '', description: '' });
       fetchGroups();
@@ -63,8 +86,9 @@ export default function GroupManager() {
       user_id: selectedUser,
     });
 
-    if (error) setMessage(error.message);
-    else {
+    if (error) {
+      setMessage(error.message);
+    } else {
       setMessage('Miembro agregado exitosamente');
       fetchMembers(selectedGroup);
     }
@@ -72,8 +96,9 @@ export default function GroupManager() {
 
   const removeMember = async (memberId) => {
     const { error } = await supabase.from('group_members').delete().eq('id', memberId);
-    if (error) setMessage(error.message);
-    else {
+    if (error) {
+      setMessage(error.message);
+    } else {
       setMessage('Miembro eliminado');
       fetchMembers(selectedGroup);
     }
@@ -85,8 +110,12 @@ export default function GroupManager() {
       .select('*, user:profiles(username, email)')
       .eq('group_id', groupId);
 
-    if (error) console.error('Error al cargar miembros:', error);
-    else setMembers(data);
+    if (error) {
+      console.error('Error al cargar miembros:', error);
+      setMessage(error.message);
+    } else {
+      setMembers(data);
+    }
   };
 
   const handleGroupSelect = (e) => {
