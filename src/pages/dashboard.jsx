@@ -1,4 +1,4 @@
-// src/pages/dashboard.jsx (versión original)
+// src/pages/dashboard.jsx
 import { useEffect, useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { useRouter } from 'next/router';
@@ -13,25 +13,31 @@ export default function Dashboard() {
 
   useEffect(() => {
     const getUser = async () => {
-      const {  { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error('Error al obtener usuario:', error);
+        router.push('/login');
+        return;
+      }
+      const user = data.user;
       if (!user) {
         router.push('/login');
         return;
       }
       setUser(user);
 
-      const { data, error } = await supabase
+      // Obtener rol del usuario
+      const {  profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single();
 
-      if (error) {
-        console.error('Error al obtener el rol:', error);
-        // Si hay error, asumimos rol 'user' para evitar bloqueos
+      if (profileError) {
+        console.error('Error al obtener el rol:', profileError);
         setRole('user');
       } else {
-        setRole(data?.role || 'user');
+        setRole(profileData?.role || 'user');
       }
       setLoading(false);
     };
