@@ -30,22 +30,28 @@ export default function GroupManager() {
   };
 
   const fetchUsers = async () => {
-    const {  user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      console.error('Error al obtener usuario:', error);
+      setMessage(error.message);
+      return;
+    }
+    const user = data.user;
     if (!user) {
       setMessage('No estás autenticado');
       return;
     }
 
-    const { data, error } = await supabase
+    const { data: profiles, error: profileError } = await supabase
       .from('profiles')
       .select('id, username, email')
       .order('username');
 
-    if (error) {
-      console.error('Error al cargar usuarios:', error);
-      setMessage(error.message);
+    if (profileError) {
+      console.error('Error al cargar usuarios:', profileError);
+      setMessage(profileError.message);
     } else {
-      setUsers(data);
+      setUsers(profiles);
     }
   };
 
