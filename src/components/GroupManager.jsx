@@ -1,4 +1,3 @@
-// src/components/GroupManager.jsx
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 
@@ -30,28 +29,28 @@ export default function GroupManager() {
   };
 
   const fetchUsers = async () => {
-    const { data: userSession, error: sessionError } = await supabase.auth.getUser();
-    if (sessionError) {
-      console.error('Error al obtener sesión:', sessionError);
-      setMessage(sessionError.message);
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      console.error('Error al obtener sesión:', error);
+      setMessage(error.message);
       return;
     }
-    const user = userSession.user;
+    const user = data.user;
     if (!user) {
       setMessage('No estás autenticado');
       return;
     }
 
-    const { data, error } = await supabase
+    const {  profiles, error: profileError } = await supabase
       .from('profiles')
       .select('id, username, email')
       .order('username');
 
-    if (error) {
-      console.error('Error al cargar usuarios:', error);
-      setMessage(error.message);
+    if (profileError) {
+      console.error('Error al cargar usuarios:', profileError);
+      setMessage(profileError.message);
     } else {
-      setUsers(data);
+      setUsers(profiles);
     }
   };
 
@@ -111,17 +110,38 @@ export default function GroupManager() {
   };
 
   const fetchMembers = async (groupId) => {
-    const { data, error } = await supabase
+    // Obtener los miembros del grupo
+    const { data: membersData, error: membersError } = await supabase
       .from('group_members')
-      .select('*, user:profiles(username, email)')
+      .select('id, user_id, group_id, joined_at')
       .eq('group_id', groupId);
 
-    if (error) {
-      console.error('Error al cargar miembros:', error);
-      setMessage(error.message);
-    } else {
-      setMembers(data);
+    if (membersError) {
+      console.error('Error al cargar miembros:', membersError);
+      setMessage(membersError.message);
+      return;
     }
+
+    // Obtener los perfiles de los usuarios
+    const userIds = membersData.map(m => m.user_id);
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, username, email')
+      .in('id', userIds);
+
+    if (profilesError) {
+      console.error('Error al cargar perfiles:', profilesError);
+      setMessage(profilesError.message);
+      return;
+    }
+
+    // Combinar los datos
+    const membersWithProfiles = membersData.map(member => {
+      const profile = profilesData.find(p => p.id === member.user_id);
+      return { ...member, user: profile };
+    });
+
+    setMembers(membersWithProfiles);
   };
 
   const handleGroupSelect = (e) => {
