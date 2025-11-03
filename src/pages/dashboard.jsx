@@ -27,7 +27,7 @@ export default function Dashboard() {
       setUser(user);
 
       // Obtener rol del usuario
-      const {  profileData, error: profileError } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
