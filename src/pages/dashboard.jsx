@@ -1,4 +1,3 @@
-// src/pages/dashboard.jsx
 import { useEffect, useState } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { useRouter } from 'next/router';
@@ -8,43 +7,33 @@ import UserPanel from '../components/UserPanel';
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState('');
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const getUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error('Error al obtener usuario:', error);
-        router.push('/login');
-        return;
-      }
-      const user = data.user;
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push('/login');
         return;
       }
       setUser(user);
 
-      // Obtener rol del usuario
-      const { data: profileData, error: profileError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single();
 
-      if (profileError) {
-        console.error('Error al obtener el rol:', profileError);
-        setRole('user');
+      if (error) {
+        console.error('Error al obtener el rol:', error);
       } else {
-        setRole(profileData?.role || 'user');
+        setRole(data?.role || 'user');
       }
-      setLoading(false);
     };
     getUser();
   }, []);
 
-  if (loading || !user) return <div>Cargando...</div>;
+  if (!user) return <div>Cargando...</div>;
 
   return (
     <div className="min-h-screen bg-gray-100">

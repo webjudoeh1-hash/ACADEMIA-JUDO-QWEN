@@ -1,7 +1,6 @@
 // src/components/AdminPanel.jsx
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import GroupManager from './GroupManager';
 
 export default function AdminPanel({ user }) {
   const [file, setFile] = useState(null);
@@ -9,19 +8,17 @@ export default function AdminPanel({ user }) {
   const [description, setDescription] = useState('');
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState([]);
-  const [groups, setGroups] = useState([]);
-  const [selectedGroup, setSelectedGroup] = useState('');
   const fileInputRef = useRef();
 
+  // Obtener archivos al cargar el componente
   useEffect(() => {
     fetchFiles();
-    fetchGroups();
   }, []);
 
   const fetchFiles = async () => {
     const { data, error } = await supabase
       .from('private_content')
-      .select('*, group:groups(name)')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -30,12 +27,6 @@ export default function AdminPanel({ user }) {
     } else {
       setFiles(data);
     }
-  };
-
-  const fetchGroups = async () => {
-    const { data, error } = await supabase.from('groups').select('*').order('name');
-    if (error) console.error('Error al cargar grupos:', error);
-    else setGroups(data);
   };
 
   const handleUpload = async () => {
@@ -60,7 +51,6 @@ export default function AdminPanel({ user }) {
       description,
       file_path: fileName,
       file_type: file.type.startsWith('image') ? 'image' : 'document',
-      group_id: selectedGroup || null,
     });
 
     if (insertError) {
@@ -70,7 +60,6 @@ export default function AdminPanel({ user }) {
       setFile(null);
       setTitle('');
       setDescription('');
-      setSelectedGroup('');
       fileInputRef.current.value = '';
       fetchFiles(); // Refrescar lista
     }
@@ -129,113 +118,72 @@ export default function AdminPanel({ user }) {
         </div>
       )}
 
-      {/* Tabs para separar funcionalidades */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex space-x-4">
-          <button
-            onClick={() => document.getElementById('upload-section').classList.remove('hidden')}
-            className="px-3 py-2 font-medium text-blue-600 border-b-2 border-blue-600"
-          >
-            Subir Documentos
-          </button>
-          <button
-            onClick={() => {
-              document.getElementById('upload-section').classList.add('hidden');
-              document.getElementById('groups-section').classList.remove('hidden');
-            }}
-            className="px-3 py-2 font-medium text-gray-500 hover:text-gray-700"
-          >
-            Gestión de Grupos
-          </button>
-        </nav>
+      {/* Subir nuevo contenido */}
+      <div className="mb-8 p-4 bg-white rounded-lg shadow">
+        <h3 className="text-xl font-semibold mb-4">Subir Nuevo Contenido</h3>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={(e) => setFile(e.target.files[0])}
+          className="mb-4 block w-full"
+        />
+        <input
+          type="text"
+          placeholder="Título"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="block w-full p-2 mb-2 border border-gray-300 rounded"
+        />
+        <textarea
+          placeholder="Descripción"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="block w-full p-2 mb-2 border border-gray-300 rounded"
+        />
+        <button
+          onClick={handleUpload}
+          className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700"
+        >
+          Subir Archivo
+        </button>
       </div>
 
-      {/* Sección de subida */}
-      <div id="upload-section" className="mb-8">
-        <div className="p-4 bg-white rounded-lg shadow">
-          <h3 className="text-xl font-semibold mb-4">Subir Nuevo Contenido</h3>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={(e) => setFile(e.target.files[0])}
-            className="mb-4 block w-full"
-          />
-          <input
-            type="text"
-            placeholder="Título"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="block w-full p-2 mb-2 border border-gray-300 rounded"
-          />
-          <textarea
-            placeholder="Descripción"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="block w-full p-2 mb-2 border border-gray-300 rounded"
-          />
-          <select
-            value={selectedGroup}
-            onChange={(e) => setSelectedGroup(e.target.value)}
-            className="block w-full p-2 mb-2 border border-gray-300 rounded"
-          >
-            <option value="">Sin grupo (visible para todos)</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={handleUpload}
-            className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700"
-          >
-            Subir Archivo
-          </button>
-        </div>
-
-        {/* Lista de archivos */}
-        <div className="mt-8">
-          <h3 className="text-xl font-semibold mb-4">Archivos Subidos</h3>
-          {files.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {files.map((file) => (
-                <div key={file.id} className="bg-white p-4 rounded-lg shadow flex flex-col">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold truncate">{file.title}</h4>
-                      <p className="text-sm text-gray-600 truncate">{file.description}</p>
-                      {file.group && <p className="text-xs text-gray-500">Grupo: {file.group.name}</p>}
-                    </div>
-                    <div className="ml-2 flex-shrink-0">
-                      <span className={`inline-block w-3 h-3 rounded-full ${file.file_type === 'image' ? 'bg-green-500' : 'bg-blue-500'}`} title={file.file_type}></span>
-                    </div>
+      {/* Lista de archivos */}
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold mb-4">Archivos Subidos</h3>
+        {files.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {files.map((file) => (
+              <div key={file.id} className="bg-white p-4 rounded-lg shadow flex flex-col">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold truncate">{file.title}</h4>
+                    <p className="text-sm text-gray-600 truncate">{file.description}</p>
                   </div>
-                  <div className="mt-auto flex space-x-2">
-                    <button
-                      onClick={() => downloadFile(file.file_path)}
-                      className="bg-blue-600 text-white py-1 px-3 rounded hover:bg-blue-700 text-sm"
-                    >
-                      Descargar
-                    </button>
-                    <button
-                      onClick={() => deleteFile(file.id, file.file_path)}
-                      className="bg-red-600 text-white py-1 px-3 rounded hover:bg-red-700 text-sm"
-                    >
-                      Eliminar
-                    </button>
+                  <div className="ml-2 flex-shrink-0">
+                    <span className={`inline-block w-3 h-3 rounded-full ${file.file_type === 'image' ? 'bg-green-500' : 'bg-blue-500'}`} title={file.file_type}></span>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500">No hay archivos subidos.</p>
-          )}
-        </div>
-      </div>
-
-      {/* Sección de grupos */}
-      <div id="groups-section" className="hidden">
-        <GroupManager />
+                <div className="mt-auto flex space-x-2">
+                  <button
+                    onClick={() => downloadFile(file.file_path)}
+                    className="bg-blue-600 text-white py-1 px-3 rounded hover:bg-blue-700 text-sm"
+                  >
+                    Descargar
+                  </button>
+                  <button
+                    onClick={() => deleteFile(file.id, file.file_path)}
+                    className="bg-red-600 text-white py-1 px-3 rounded hover:bg-red-700 text-sm"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500">No hay archivos subidos.</p>
+        )}
       </div>
     </div>
   );
